@@ -28,21 +28,30 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
+
   try {
     const user = await User.findOne({ where: { email } });
-    if (!user)
-      return res.status(400).json({ message: "Invalid email or password" });
+
+    if (!user) {
+      return res.status(400).json({ message: "Email not found" });
+    }
 
     const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword)
-      return res.status(400).json({ message: "Invalid email or password" });
 
+    if (!validPassword) {
+      return res.status(400).json({ message: "Incorrect password" });
+    }
+
+    // If the email and password are valid, generate a JWT token
     const token = jwt.sign(
       { id: user.id, email: user.email },
       process.env.JWT_SECRET
     );
+
+    // Send the token as a response
     res.json({ token });
   } catch (error) {
+    // Handle any other errors that occur during the process
     res.status(500).json({ error: "Failed to login" });
   }
 };
