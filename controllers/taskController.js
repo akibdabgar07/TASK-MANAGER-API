@@ -2,6 +2,7 @@ const Task = require("../model/task.js");
 
 exports.createTask = async (req, res) => {
   const { title, description, priority, dueDate, status } = req.body;
+
   try {
     const task = await Task.create({
       title,
@@ -29,8 +30,15 @@ exports.getTasks = async (req, res) => {
 exports.updateTask = async (req, res) => {
   const { id } = req.params;
   const { title, description, priority, status, dueDate } = req.body;
+
   try {
-    const task = await Task.findOne({ where: { id, userId: req.user.id } });
+    const taskId = parseInt(id, 10);
+
+    // Search for the task based on id and userId
+    const task = await Task.findOne({
+      where: { id: taskId, userId: req.user.id },
+    });
+
     if (!task) return res.status(404).json({ message: "Task not found" });
 
     await task.update({ title, description, priority, status, dueDate });

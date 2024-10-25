@@ -1,13 +1,23 @@
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+const jwtUtil = require("../utils/jwt.util");
 const User = require("../model/user.js");
 const dotenv = require("dotenv");
+const AuthServices = require("../services/auth.services.js");
+const bcryptUtil = require("../utils/bcrypt.util.js");
+const jwtConfig = require("../config/jwt.config.js");
+// const logger = require("../utils/logger.util.js");
 
 dotenv.config();
 
 exports.register = async (req, res) => {
   const { email, password, firstName, lastName, isAdmin } = req.body;
+
   try {
+    const alreadyExists = await AuthServices.findUserByEmail(email);
+    if (alreadyExists) {
+      return res.status(403).json({ message: "Given email already exists." });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
       email,
@@ -26,32 +36,85 @@ exports.register = async (req, res) => {
   }
 };
 
+exports.register = async (req, res) => {
+  // Check if email already exists
+  const isExist = await AuthServices.findUserByEmail(req.body.email);
+  if (isExist) {
+    return res.status(400).json({
+      message: "Given email already exists.",
+    });
+  }
+
+  // Hash Password
+  const hashedPassword = await bcryptUtil.createHash(req.body.password);
+
+  // Prepare user data
+  const userData = {
+    email: req.body.email,
+    firstName: req.body.firstName,
+    password: hashedPassword,
+    lastName: req.body.lastName,
+    isAdmin: req.body.isAdmin,
+  };
+
+  // Create a new user
+  const user = await AuthServices.createUser(userData);
+  const userId = user?.id || 0;
+
+  // Remove password from the user object before sending the response
+  delete user.password;
+
+  return res.json({
+    data: user,
+    message: "Success",
+  });
+};
+
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+  // Find user by email
+  const user = await AuthServices.findUserByEmail(req.body.email);
 
-  try {
-    const user = await User.findOne({ where: { email } });
-
-    if (!user) {
-      return res.status(400).json({ message: "Email not found" });
-    }
-
-    const validPassword = await bcrypt.compare(password, user.password);
-
-    if (!validPassword) {
-      return res.status(400).json({ message: "Incorrect password" });
-    }
-
-    // If the email and password are valid, generate a JWT token
-    const token = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET
+  // Check if user exists
+  if (user) {
+    // Compare password with the stored hash
+    const isMatched = await bcryptUtil.compareHash(
+      req.body.password,
+      user.password
     );
+    if (isMatched) {
+      const userData = {
+        id: user.id,
+        email: user.email,
+      };
 
-    // Send the token as a response
-    res.status(201).json({ token });
-  } catch (error) {
-    // Handle any other errors that occur during the process
-    res.status(500).json({ error: "Failed to login" });
+      const expiresIn = jwtConfig.tokenTLL;
+
+      // Create an access token
+      const accessToken = await jwtUtil.createAccessToken(userData, expiresIn);
+
+      // Create a refresh token
+      const refreshToken = await jwtUtil.createRefreshToken(userData);
+
+      // Assign refresh token in http-only cookie
+      res.cookie("jwtRefreshToken", refreshToken, {
+        httpOnly: true,
+        //sameSite: 'none',
+        secure: true,
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+      });
+
+      // logger.info("Login success");
+
+      return res.json({
+        access_token: accessToken,
+        token_type: "Bearer",
+        expires_in: expiresIn,
+        message: "Success",
+      });
+    } else {
+      return res.status(400).json({ message: "Invalid password" });
+    }
+  } else {
+    return res.status(400).json({ message: "Invalid email" });
   }
 };
