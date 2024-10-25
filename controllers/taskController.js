@@ -1,13 +1,14 @@
 const Task = require("../model/task.js");
 
 exports.createTask = async (req, res) => {
-  const { title, description, priority, dueDate } = req.body;
+  const { title, description, priority, dueDate, status } = req.body;
   try {
     const task = await Task.create({
       title,
       description,
       priority,
       dueDate,
+      status,
       userId: req.user.id, // Link to logged-in user
     });
     res.status(201).json(task);
