@@ -51,22 +51,3 @@ exports.logoutUser = (token, exp) => {
  * @param {Object} req - The request object containing user data
  * @returns {Promise} - The result of updating the user info
  */
-exports.saveUserInfo = async (req) => {
-  const inpParams = {
-    username: req.body.username,
-    sso_sub: req.body.sso_sub,
-    sso_access_token: req.body.sso_access_token,
-    sso_refresh_token: req.body.sso_refresh_token,
-    sso_user_data: req.body.sso_user_data,
-    role: req.body.role,
-    state_code: req.body.state_code,
-    county_code: req.body.county_code,
-  };
-
-  // Update user information based on email
-  return await UserModel.update(inpParams, {
-    where: {
-      email: req.body.email,
-    },
-  });
-};
