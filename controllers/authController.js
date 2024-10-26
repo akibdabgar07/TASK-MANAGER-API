@@ -9,32 +9,7 @@ const jwtConfig = require("../config/jwt.config.js");
 
 dotenv.config();
 
-exports.register = async (req, res) => {
-  const { email, password, firstName, lastName, isAdmin } = req.body;
 
-  try {
-    const alreadyExists = await AuthServices.findUserByEmail(email);
-    if (alreadyExists) {
-      return res.status(403).json({ message: "Given email already exists." });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      email,
-      password: hashedPassword,
-      firstName,
-      lastName,
-      isAdmin,
-    });
-    res.status(201).json({
-      status: 201,
-      data: { email, isAdmin },
-      message: "User registered successfully",
-    });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to register user" });
-  }
-};
 
 exports.register = async (req, res) => {
   // Check if email already exists

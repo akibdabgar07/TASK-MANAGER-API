@@ -1,18 +1,20 @@
 const Task = require("../model/task.js");
-
+const taskServices = require("../services/task.services.js");
 exports.createTask = async (req, res) => {
   const { title, description, priority, dueDate, status } = req.body;
 
   try {
-    const task = await Task.create({
+    const task = {
       title,
       description,
       priority,
       dueDate,
       status,
       userId: req.user.id, // Link to logged-in user
-    });
-    res.status(201).json(task);
+    };
+    const responseData = await taskServices.creteTaskService(task);
+
+    res.status(201).json(responseData);
   } catch (error) {
     res.status(500).json({ error: "Failed to create task" });
   }
