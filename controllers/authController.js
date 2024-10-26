@@ -9,8 +9,6 @@ const jwtConfig = require("../config/jwt.config.js");
 
 dotenv.config();
 
-
-
 exports.register = async (req, res) => {
   // Check if email already exists
   const isExist = await AuthServices.findUserByEmail(req.body.email);
